@@ -75,10 +75,6 @@ RUN \
     git config --global user.email $USER@codelinaro.com \
     && git config --global user.name $USER
 
-# Jfrog CLI
-RUN curl -fL https://install-cli.jfrog.io | sh && \
-    chmod +x jf && \
-    mv jf /usr/local/bin/jf
 # Copy notice generation script
 RUN \
     git clone https://git.codelinaro.org/clo/le/qcom-notice.git scripts
