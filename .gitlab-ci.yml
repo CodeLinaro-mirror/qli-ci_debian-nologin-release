@@ -4,7 +4,7 @@ default:
     - dockerd -l fatal &      # Start Docker daemon in background
     - sleep 5                 # Wait for Docker daemon to initialize
   tags:
-    - amd64-runner            # Specify the runner tag
+    - arm64-runner            # Specify the runner tag
 
 # Global variables for the pipeline
 variables:
@@ -13,11 +13,6 @@ variables:
   KUBERNETES_MEMORY_REQUEST: 256G
   KUBERNETES_EPHEMERAL_STORAGE_REQUEST: 2T
 
-  # Define variables for easier maintenance and updates
-  QCOM_RELEASE: qli-2.0
-  ARCH: x86
-  DOWNLOAD_SERVER: 0
-  MACHINE: iq-9075-evk
 
 build:
   stage: build
@@ -36,87 +31,28 @@ build:
     - /usr/local/bin/jf rt ping
 
   script:
-    # Define variables for the build
-    - DOCKER_TAG="qli-2.0-r22"
-    - URL="https://github.com/qualcomm-linux"
-    - BRANCH="qli-2.0"
-    - PROJECT="meta-qcom-robotics-sdk"
-    - DISTRO="qcom-robotics-distro"
-    - IMAGE="qcom-multimedia-image"
-    - USER=lnxbuild         # Match the USER in Dockerfile
-    - UID=2366345           # Match the UID in Dockerfile
-    - GID=2366345           # Match the GID in Dockerfile
+
+
+    # Variables
+    - BRANCH="20260529-1"
+    - ARCH="ARM"
+    - KERNAL_TAG="qcom-next-7.1-rc4-20260524"
+    - DOCKER_TAG="glymero-builder"
+    - SNAPSHOT="20260528"
+    - DTB="qcom/glymur-crd.dtb"
+    - PR="422"
+    - USER=lnxbuild
+    - UID=2366345
+    - GID=2366345
     - WORK_DIR="/home/${USER}/app"
 
     # Docker Build & Run
-    - docker build --build-arg USER=${USER} --build-arg UID=${UID} --build-arg GID=${GID} --no-cache -t ${DOCKER_TAG} .
-    - docker run --name build ${DOCKER_TAG} -u ${URL} -b ${BRANCH} -p ${PROJECT} -M ${MACHINE} -D ${DOWNLOAD_SERVER} -d ${DISTRO} -i ${IMAGE} -w "${WORK_DIR}/${DOCKER_TAG}" -a ${ARCH}
+    - sudo docker build --network=host --build-arg USER=${USER} --build-arg UID=${UID} --build-arg GID=${GID} --no-cache -t ${DOCKER_TAG} .
+    - sudo docker run --network=host -v $(pwd):${WORK_DIR} glymero-builder -b ${BRANCH} -k ${KERNAL_TAG} -s ${SNAPSHOT} -d ${DTB} -p ${PR} -w ${WORK_DIR} -x false
+    - mkdir -p /images
+    - docker cp build:${WORK_DIR}/${DOCKER_TAG}/qcom-deb-images/deb_artifacts.tar /images
+    - ls /images
 
     # Define a reusable function for artifacts copy & zip it and upload to artifactory
     # This reduces code duplication and improves maintainability
-
-
-    - |
-      echo "Setting up artifacts and sdk copy, zip and upload function..."
-      create_robotics_artifacts_and_upload(){
-        local machine_name=$1
-        mkdir -p /images/${machine_name}
-        mkdir -p /images/backup/${machine_name}
-        if [ "$DOWNLOAD_SERVER" == 0 ] && [ "$ARCH" == "arm" ]; then
-          mkdir -p /images/${machine_name}/sdk
-          mkdir -p /target/${machine_name}/qirpsdk_artifacts
-          docker cp build:${WORK_DIR}/${DOCKER_TAG}/build/tmp/deploy/sdk/. /images/${machine_name}/sdk/
-          docker cp build:${WORK_DIR}/${DOCKER_TAG}/NOTICE /images/${machine_name}/
-          docker cp build:${WORK_DIR}/${DOCKER_TAG}/NO.LOGIN.BINARY.LICENSE.QTI.pdf /images/${machine_name}/
-          docker cp build:${WORK_DIR}/${DOCKER_TAG}/build/tmp/deploy/qirpsdk_artifacts/. /images/${machine_name}/qirpsdk_artifacts/
-
-          zip -r ${ARCH}-${QCOM_RELEASE}-robotics-sdk-artifacts.zip /images/${machine_name}/qirpsdk_artifacts /images/${machine_name}/NOTICE /images/${machine_name}/NO.LOGIN.BINARY.LICENSE.QTI.pdf
-          zip -r ${ARCH}-${QCOM_RELEASE}-esdk.zip /images/${machine_name} /images/${machine_name}/sdk -i /images/${machine_name}/sdk/*-toolchain-ext-*.sh -i /images/${machine_name}/NOTICE -i /images/${machine_name}/NO.LOGIN.BINARY.LICENSE.QTI.pdf
-          zip -r ${ARCH}-${QCOM_RELEASE}-standardsdk.zip /images/${machine_name} /images/${machine_name}/sdk -i /images/${machine_name}/sdk/*-toolchain-*.sh -x /images/${machine_name}/sdk/*-toolchain-ext-*.sh -i /images/${machine_name}/NOTICE -i /images/${machine_name}/NO.LOGIN.BINARY.LICENSE.QTI.pdf
-          /usr/local/bin/jf rt ping
-          /usr/local/bin/jf rt u --detailed-summary --flat=false --recursive "${ARCH}-${QCOM_RELEASE}-*.zip" qli-ci/flashable-binaries/meta-qcom-robotics/qcom-robotics-distro/${machine_name}/
-          rm -f ${ARCH}-${QCOM_RELEASE}-*.zip
-        else
-          mkdir -p /images/${machine_name}/sdk
-          mkdir -p /target/${machine_name}/qirpsdk_artifacts
-          docker cp -L build:${WORK_DIR}/${DOCKER_TAG}/build/tmp/deploy/images/${machine_name}/. /images/backup/${machine_name}/
-          docker cp build:${WORK_DIR}/${DOCKER_TAG}/build/tmp/deploy/sdk/. /images/${machine_name}/sdk/
-          docker cp build:${WORK_DIR}/${DOCKER_TAG}/NOTICE /images/${machine_name}/
-          docker cp build:${WORK_DIR}/${DOCKER_TAG}/NO.LOGIN.BINARY.LICENSE.QTI.pdf /images/${machine_name}/
-          docker cp build:${WORK_DIR}/${DOCKER_TAG}/build/tmp/deploy/qirpsdk_artifacts/. /images/${machine_name}/qirpsdk_artifacts/
-
-          zip -r ${ARCH}-${QCOM_RELEASE}-robotics-sdk-artifacts.zip /images/${machine_name}/qirpsdk_artifacts /images/${machine_name}/NOTICE /images/${machine_name}/NO.LOGIN.BINARY.LICENSE.QTI.pdf
-          #**********************
-          real_path=$(readlink "/images/backup/${machine_name}/qcom-robotics-image-${machine_name}.rootfs.qcomflash.tar.gz")
-          cp /images/backup/${machine_name}/${real_path} /images/${machine_name}/
-          tar -xzvf /images/${machine_name}/${real_path} -C /images/${machine_name}
-          rm -f /images/${machine_name}/${real_path}
-          real_path=$(readlink "/images/backup/${machine_name}/qcom-robotics-proprietary-image-${machine_name}.rootfs.qcomflash.tar.gz")
-          cp /images/backup/${machine_name}/${real_path} /images/${machine_name}/
-          tar -xzvf /images/${machine_name}/${real_path} -C /images/${machine_name}
-          rm -f /images/${machine_name}/${real_path}
-          rm -rf /images/backup/${machine_name}
-          #******************
-
-          zip -r ${QCOM_RELEASE}-qcom-robotics-image.zip /images/${machine_name}/NOTICE /images/${machine_name}/NO.LOGIN.BINARY.LICENSE.QTI.pdf /images/${machine_name}/qcom-robotics-image-${machine_name}
-          zip -r ${QCOM_RELEASE}-qcom-robotics-proprietary-image.zip /images/${machine_name}/NOTICE /images/${machine_name}/NO.LOGIN.BINARY.LICENSE.QTI.pdf /images/${machine_name}/qcom-robotics-proprietary-image-${machine_name}
-          zip -r ${ARCH}-${QCOM_RELEASE}-esdk.zip /images/${machine_name} /images/${machine_name}/sdk -i /images/${machine_name}/sdk/*-toolchain-ext-*.sh -i /images/${machine_name}/NOTICE -i /images/${machine_name}/NO.LOGIN.BINARY.LICENSE.QTI.pdf
-          zip -r ${ARCH}-${QCOM_RELEASE}-standardsdk.zip /images/${machine_name} /images/${machine_name}/sdk -i /images/${machine_name}/sdk/*-toolchain-*.sh -x /images/${machine_name}/sdk/*-toolchain-ext-*.sh -i /images/${machine_name}/NOTICE -i /images/${machine_name}/NO.LOGIN.BINARY.LICENSE.QTI.pdf
-          /usr/local/bin/jf rt ping
-          /usr/local/bin/jf rt u --detailed-summary --flat=false --recursive "${QCOM_RELEASE}-*.zip" qli-ci/flashable-binaries/meta-qcom-robotics/qcom-robotics-distro/${machine_name}/
-          rm -f ${QCOM_RELEASE}-*.zip
-          /usr/local/bin/jf rt u --detailed-summary --flat=false --recursive "${ARCH}-${QCOM_RELEASE}-*.zip" qli-ci/flashable-binaries/meta-qcom-robotics/qcom-robotics-distro/${machine_name}/
-          rm -f ${ARCH}-${QCOM_RELEASE}-*.zip
-        fi
-      }
-
-    #*********************
-    - |
-      if [ "$ARCH" == "x86" ]; then
-          #create_robotics_artifacts_and_upload "iq-8275-evk"
-          create_robotics_artifacts_and_upload "iq-9075-evk"
-      else
-        #create_robotics_artifacts_and_upload "iq-8275-evk"
-        create_robotics_artifacts_and_upload "iq-9075-evk"
-      fi
     - docker rm build

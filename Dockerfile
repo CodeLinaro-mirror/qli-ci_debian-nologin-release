@@ -1,70 +1,55 @@
-FROM ubuntu:22.04
+# Install system package dependencies for kernel build and image creation
+FROM ghcr.io/go-debos/debos:latest
 LABEL maintainer="qswcct.devops@qti.qualcomm.com"
-
-ENV \
-    DEBIAN_FRONTEND=noninteractive \
-    LANG=en_US.UTF-8 \
-    LC_ALL=en_US.UTF-8
-
-# Install system package dependencies
 RUN \
     apt-get update \
-    && apt-get install -y --no-install-recommends \
-        build-essential \
-        chrpath \
-        cpio \
-        curl \
-        file \
-        debianutils \
-        diffstat \
-        gawk \
-        tar \
-        tree \
-        gcc \
+    && apt-get install -y \
         git \
-        iputils-ping \
-        libegl1-mesa \
-        liblz4-tool \
-        libsdl1.2-dev \
-        locales \
-        mesa-common-dev \
-        openssh-client \
+        crossbuild-essential-arm64 \
+        make \
+        fakemachine \
+        flex \
+        bison \
+        bc \
+        libdw-dev \
+        libelf-dev \
+        libssl-dev \
+        libssl-dev:arm64 \
+        dpkg-dev \
+        debhelper-compat \
+        kmod \
         python3 \
-        python3-git \
-        python3-jinja2 \
-        python3-pexpect \
         python3-pip \
-        python3-subunit \
-        python3-requests \
-        socat \
-        sudo \
-        texinfo \
-        unzip \
-        vim \
+        python3-pexpect \
+        rsync \
+        coreutils \
+        build-essential \
+        curl \
         wget \
-        xterm \
-        python3-yaml \
-        xz-utils \
-        libgtest-dev \
-        gfortran \
-        zstd \
+        file \
+        tar \
+        sudo \
+        locales \
+        openssh-client \
+        ca-certificates \
+        gnupg \
+        lsb-release \
+        debian-archive-keyring \
+        debos \
+        mmdebstrap \
+        mtools \
+        python3-pytest \
+        python3-defusedxml \
+        qemu-efi-aarch64 \
+        qemu-system-arm \
+        xmlstarlet \
+        device-tree-compiler \
+        u-boot-tools \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    # Set python to python3.8.1
-    #&& update-alternatives --install /usr/bin/python python /usr/bin/python3.8 1 \
-    # Generate locales
     && locale-gen en_US.UTF-8 \
-    # Update default sh
     && ln -sf /bin/bash /bin/sh
 
-# Install repo tool
-RUN \
-    wget -qP /usr/local/bin https://storage.googleapis.com/git-repo-downloads/repo \
-    && chmod a+x /usr/local/bin/repo
-
-RUN pip3 install --no-cache-dir kas
-
-# Configure non-root user omniscan
 ARG USER=codelinaro
 ARG GROUP=codelinaro
 ARG UID=2366345
@@ -78,20 +63,25 @@ RUN \
     && chown ${UID}:${GID} ${USER_HOME} \
     && chown ${UID}:${GID} ${WORKDIR} \
     && groupadd -g ${GID} ${GROUP} \
-    && useradd -l -d ${USER_HOME} -u ${UID} -g ${GID} -s /bin/bash ${USER}
+    && useradd -l -d ${USER_HOME} -u ${UID} -g ${GID} -s /bin/bash ${USER} \
+    && echo "${USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Switch to non-root user
 USER $USER
 WORKDIR $WORKDIR
-
 
 # Configure .gitconfig
 RUN \
     git config --global user.email $USER@codelinaro.com \
     && git config --global user.name $USER
 
+# Jfrog CLI
+RUN curl -fL https://install-cli.jfrog.io | sh && \
+    chmod +x jf && \
+    mv jf /usr/local/bin/jf
 # Copy notice generation script
 RUN \
     git clone https://git.codelinaro.org/clo/le/qcom-notice.git scripts
 
-ENTRYPOINT ["/bin/bash", "./scripts/sync_build_kas_robotics.sh"]
+
+ENTRYPOINT ["/bin/bash", "./scripts/deb_build.sh"]
