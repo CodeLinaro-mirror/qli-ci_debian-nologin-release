@@ -79,5 +79,6 @@ RUN \
 RUN \
     git clone https://git.codelinaro.org/clo/le/qcom-notice.git scripts
 
+RUN ls scripts/
 
 ENTRYPOINT ["/bin/bash", "./scripts/deb_build.sh"]
