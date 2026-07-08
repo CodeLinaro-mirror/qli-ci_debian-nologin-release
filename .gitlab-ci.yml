@@ -48,7 +48,7 @@ build:
 
     # Docker Build & Run
     - docker build --network=host --build-arg USER=${USER} --build-arg UID=${UID} --build-arg GID=${GID} --no-cache -t ${DOCKER_TAG} .
-    - docker run --network=host -v $(pwd):${WORK_DIR} glymero-builder -b ${BRANCH} -k ${KERNAL_TAG} -s ${SNAPSHOT} -d ${DTB} -p ${PR} -w ${WORK_DIR} -x false
+    - docker run --name build --network=host -v $(pwd):${WORK_DIR} glymero-builder -b ${BRANCH} -k ${KERNAL_TAG} -s ${SNAPSHOT} -d ${DTB} -p ${PR} -w ${WORK_DIR} -x false
     - mkdir -p /images
     - docker cp build:${WORK_DIR}/${DOCKER_TAG}/qcom-deb-images/deb_artifacts.tar /images
     - ls /images
