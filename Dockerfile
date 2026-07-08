@@ -81,4 +81,6 @@ RUN \
 
 RUN ls scripts/
 
+RUN pwd
+
 ENTRYPOINT ["/bin/bash", "./scripts/deb_build.sh"]
