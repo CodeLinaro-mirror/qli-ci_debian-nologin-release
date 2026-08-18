@@ -34,13 +34,11 @@ build:
 
 
     # Variables
-    - BRANCH="20260529-1"
+    - BRANCH="20260731-2"
     - ARCH="ARM"
-    - KERNAL_TAG="qcom-next-7.1-rc4-20260524"
+    - KERNAL_TAG="qcom-next-7.2-rc3-20260731"
     - DOCKER_TAG="glymero-builder"
-    - SNAPSHOT="20260528"
-    - DTB="qcom/glymur-crd.dtb"
-    - PR="422"
+    - SNAPSHOT="20260731"
     - USER=lnxbuild
     - UID=2366345
     - GID=2366345
@@ -49,7 +47,7 @@ build:
 
     # Docker Build & Run
     - docker build --network=host --build-arg USER=${USER} --build-arg UID=${UID} --build-arg GID=${GID} --no-cache -t ${DOCKER_TAG} .
-    - docker run --name build --network=host ${DOCKER_TAG} -b ${BRANCH} -k ${KERNAL_TAG} -s ${SNAPSHOT} -d ${DTB} -p ${PR} -w ${WORK_DIR}/${DOCKER_TAG} -x ${XFE}
+    - docker run --name build --network=host ${DOCKER_TAG} -b ${BRANCH} -k ${KERNAL_TAG} -s ${SNAPSHOT} -w ${WORK_DIR}/${DOCKER_TAG} -x ${XFE}
     - mkdir -p /images
     - docker cp build:${WORK_DIR}/${DOCKER_TAG}/qcom-deb-images/deb_artifacts.tar /images
     - ls /images
