@@ -34,11 +34,11 @@ build:
 
 
     # Variables
-    - RELEASE_TAG="20260731-1"
+    - RELEASE_TAG="20260828-1"
     - ARCH="ARM"
-    - KERNAL_TAG="qcom-next-7.2-rc3-20260731"
+    - KERNAL_TAG="qcom-next-7.2-rc7-20260821"
     - DOCKER_TAG="glymero-builder"
-    - SNAPSHOT="20260731T000000Z"
+    - SNAPSHOT="20260825T000000Z"
     - USER=lnxbuild
     - UID=2366345
     - GID=2366345
