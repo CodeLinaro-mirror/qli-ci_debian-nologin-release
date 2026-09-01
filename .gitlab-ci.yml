@@ -34,7 +34,7 @@ build:
 
 
     # Variables
-    - BRANCH="20260731-1"
+    - RELEASE_TAG="20260731-1"
     - ARCH="ARM"
     - KERNAL_TAG="qcom-next-7.2-rc3-20260731"
     - DOCKER_TAG="glymero-builder"
@@ -47,7 +47,7 @@ build:
 
     # Docker Build & Run
     - docker build --network=host --build-arg USER=${USER} --build-arg UID=${UID} --build-arg GID=${GID} --no-cache -t ${DOCKER_TAG} .
-    - docker run --name build --network=host ${DOCKER_TAG} -b ${BRANCH} -k ${KERNAL_TAG} -s ${SNAPSHOT} -w ${WORK_DIR}/${DOCKER_TAG} -x ${XFE}
+    - docker run --name build --network=host ${DOCKER_TAG} -t ${RELEASE_TAG} -k ${KERNAL_TAG} -s ${SNAPSHOT} -w ${WORK_DIR}/${DOCKER_TAG} -x ${XFE}
     - mkdir -p /images
     - docker cp build:${WORK_DIR}/${DOCKER_TAG}/qcom-deb-images/deb_artifacts.tar /images
     - ls /images
